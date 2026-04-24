@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dive Efficiency Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #08111f;
+    --navy2: #0e1c30;
+    --cyan: #00e5c8;
+    --gold: #f5c842;
+    --slate: #8ea3bf;
+    --muted: #4a6480;
+    --white: #f0f4f8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    padding: 28px 24px 32px;
+    min-height: 100vh;
+  }
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--slate);
+    font-weight: 300;
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 640px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+  .slider-group { margin-bottom: 22px; }
+  .slider-group label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .slider-group label span {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--cyan);
+    letter-spacing: 0;
+    text-transform: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--cyan);
+    border: 3px solid var(--navy2);
+    box-shadow: 0 0 0 1px var(--cyan);
+    cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--cyan);
+    border: 3px solid var(--navy2);
+    cursor: pointer;
+  }
+
+  /* Results */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .result-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(0,229,200,0.1);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .result-card .r-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .result-card .r-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    color: var(--cyan);
+    line-height: 1;
+  }
+  .result-card.full { grid-column: 1 / -1; border-color: rgba(245,200,66,0.25); }
+  .result-card.full .r-val { color: var(--gold); font-size: 38px; }
+  .eff-bar-wrap {
+    margin-top: 8px;
+    height: 5px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .eff-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--gold);
+    transition: width 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .eff-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  /* Canvas */
+  .canvas-wrap {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(0,229,200,0.08);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    border-radius: 3px;
+  }
+  .canvas-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  .legend-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  /* Equations panel */
+  .eq-panel {
+    margin-top: 20px;
+    background: rgba(0,229,200,0.04);
+    border: 1px solid rgba(0,229,200,0.1);
+    border-radius: 6px;
+    padding: 16px 18px;
+  }
+  .eq-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .eq-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 12px;
+  }
+  .eq-row:last-child { border-bottom: none; }
+  .eq-row .eq-label { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; }
+  .eq-row .eq-formula { color: var(--cyan); font-family: 'DM Mono', monospace; font-size: 11px; }
+
+  .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 24px 0; }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">Physics of Swimming · Interactive Tool</div>
+<h1>Dive Efficiency Calculator</h1>
+<p class="subtitle">Adjust the parameters below to model how angle, velocity, and height affect a competitive dive start.</p>
+
+<div class="two-col">
+  <!-- LEFT: sliders + results -->
+  <div>
+    <div class="slider-group">
+      <label>Takeoff Angle (θ) <span id="angleVal">35°</span></label>
+      <input type="range" id="angleSlider" min="10" max="60" value="35" step="1">
+    </div>
+    <div class="slider-group">
+      <label>Takeoff Velocity (v₀) <span id="velVal">6.0 m/s</span></label>
+      <input type="range" id="velSlider" min="3" max="9" value="6.0" step="0.1">
+    </div>
+    <div class="slider-group">
+      <label>Block Height (h) <span id="htVal">0.75 m</span></label>
+      <input type="range" id="htSlider" min="0.3" max="1.2" value="0.75" step="0.05">
+    </div>
+
+    <div class="results-grid">
+      <div class="result-card">
+        <div class="r-label">Horizontal Range</div>
+        <div class="r-val" id="r-range">— m</div>
+      </div>
+      <div class="result-card">
+        <div class="r-label">Flight Time</div>
+        <div class="r-val" id="r-time">— s</div>
+      </div>
+      <div class="result-card">
+        <div class="r-label">Entry Speed</div>
+        <div class="r-val" id="r-entry">— m/s</div>
+      </div>
+      <div class="result-card">
+        <div class="r-label">Entry Angle</div>
+        <div class="r-val" id="r-eangle">—°</div>
+      </div>
+      <div class="result-card full">
+        <div class="r-label">Dive Efficiency Score</div>
+        <div class="r-val" id="r-eff">—%</div>
+        <div class="eff-bar-wrap"><div class="eff-bar" id="eff-bar" style="width:0%"></div></div>
+        <div class="eff-note" id="eff-note"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: canvas + equations -->
+  <div>
+    <div class="canvas-wrap">
+      <canvas id="trajCanvas" height="200"></canvas>
+      <div class="canvas-legend">
+        <span><span class="legend-dot" style="background:#00e5c8"></span>Trajectory</span>
+        <span><span class="legend-dot" style="background:#f5c842"></span>Entry point</span>
+        <span><span class="legend-dot" style="background:#00e5c8;opacity:0.4"></span>Takeoff</span>
+      </div>
+    </div>
+
+    <div class="eq-panel">
+      <div class="eq-title">Equations Used</div>
+      <div class="eq-row"><span class="eq-label">Horizontal:</span><span class="eq-formula">x(t) = v₀·cos(θ)·t</span></div>
+      <div class="eq-row"><span class="eq-label">Vertical:</span><span class="eq-formula">y(t) = h + v₀·sin(θ)·t − ½gt²</span></div>
+      <div class="eq-row"><span class="eq-label">Entry speed:</span><span class="eq-formula">v = √(vₓ² + v_y²)</span></div>
+      <div class="eq-row"><span class="eq-label">Impulse:</span><span class="eq-formula">J = F·Δt = m·Δv</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const g = 9.81;
+
+function getEffNote(eff) {
+  if (eff >= 88) return '★ Elite level — near-optimal parameters';
+  if (eff >= 75) return '✓ Competitive — good efficiency range';
+  if (eff >= 60) return '△ Developing — angle or velocity off ideal';
+  return '✗ Inefficient — significant room to improve';
+}
+
+function updateCalc() {
+  const theta = parseFloat(document.getElementById('angleSlider').value);
+  const v0    = parseFloat(document.getElementById('velSlider').value);
+  const h     = parseFloat(document.getElementById('htSlider').value);
+
+  document.getElementById('angleVal').textContent = theta + '°';
+  document.getElementById('velVal').textContent   = v0.toFixed(1) + ' m/s';
+  document.getElementById('htVal').textContent    = h.toFixed(2) + ' m';
+
+  const rad = theta * Math.PI / 180;
+  const vx  = v0 * Math.cos(rad);
+  const vy  = v0 * Math.sin(rad);
+
+  // time of flight: h + vy*t - 0.5*g*t² = 0
+  const disc = vy * vy + 2 * g * h;
+  const T    = (vy + Math.sqrt(disc)) / g;
+
+  const R         = vx * T;
+  const vy_entry  = vy - g * T;
+  const v_entry   = Math.sqrt(vx * vx + vy_entry * vy_entry);
+  const ea_deg    = Math.abs(Math.atan2(Math.abs(vy_entry), vx) * 180 / Math.PI);
+
+  const range_score = Math.min(R / 4.0, 1.0) * 100;
+  const angle_score = Math.max(0, 100 - Math.abs(ea_deg - 40) * 3.5);
+  const vx_ratio    = (vx / v_entry) * 100;
+  const efficiency  = Math.round(0.4 * range_score + 0.35 * angle_score + 0.25 * vx_ratio);
+
+  document.getElementById('r-range').textContent  = R.toFixed(2) + ' m';
+  document.getElementById('r-time').textContent   = T.toFixed(2) + ' s';
+  document.getElementById('r-entry').textContent  = v_entry.toFixed(2) + ' m/s';
+  document.getElementById('r-eangle').textContent = Math.round(ea_deg) + '°';
+  document.getElementById('r-eff').textContent    = efficiency + '%';
+  document.getElementById('eff-bar').style.width  = efficiency + '%';
+  document.getElementById('eff-note').textContent = getEffNote(efficiency);
+
+  drawTrajectory(vx, vy, h, T, R);
+}
+
+function drawTrajectory(vx, vy, h, T, R) {
+  const canvas = document.getElementById('trajCanvas');
+  const dpr    = window.devicePixelRatio || 1;
+  const dispW  = canvas.offsetWidth || canvas.parentElement.offsetWidth || 340;
+  const dispH  = 200;
+  canvas.width  = dispW * dpr;
+  canvas.height = dispH * dpr;
+  canvas.style.height = dispH + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const W = dispW, H = dispH;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { t: 20, r: 16, b: 28, l: 16 };
+  const t_peak = vy / g;
+  const y_peak = h + vy * t_peak - 0.5 * g * t_peak * t_peak;
+  const y_max  = Math.max(y_peak, h) + 0.4;
+  const x_max  = R + 0.4;
+
+  const cx = x => pad.l + (x / x_max) * (W - pad.l - pad.r);
+  const cy = y => H - pad.b - (y / y_max) * (H - pad.t - pad.b);
+
+  // grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const yy = cy(y_max * i / 4);
+    ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(W - pad.r, yy); ctx.stroke();
+  }
+
+  // water surface
+  ctx.beginPath();
+  ctx.moveTo(0, cy(0)); ctx.lineTo(W, cy(0));
+  ctx.strokeStyle = 'rgba(0,140,220,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // water fill
+  ctx.fillStyle = 'rgba(0,80,180,0.08)';
+  ctx.fillRect(0, cy(0), W, H - cy(0));
+
+  // axis labels
+  ctx.font = '9px DM Mono, monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.fillText('0', pad.l - 2, cy(0) + 12);
+  ctx.fillText(R.toFixed(1) + 'm', cx(R) - 18, H - 4);
+
+  // block
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.roundRect(0, cy(h), cx(0) + 4, cy(0) - cy(h), 2);
+  ctx.fill(); ctx.stroke();
+
+  // shadow/glow under curve
+  const grad = ctx.createLinearGradient(0, cy(y_max), 0, cy(0));
+  grad.addColorStop(0, 'rgba(0,229,200,0.06)');
+  grad.addColorStop(1, 'rgba(0,229,200,0)');
+  ctx.beginPath();
+  let first = true;
+  const steps = 100;
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * T;
+    const x = vx * t, y = h + vy * t - 0.5 * g * t * t;
+    if (first) { ctx.moveTo(cx(x), cy(y)); first = false; }
+    else ctx.lineTo(cx(x), cy(y));
+  }
+  ctx.lineTo(cx(R), cy(0));
+  ctx.lineTo(cx(0), cy(0));
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // trajectory line
+  ctx.beginPath();
+  first = true;
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * T;
+    const x = vx * t, y = h + vy * t - 0.5 * g * t * t;
+    if (first) { ctx.moveTo(cx(x), cy(y)); first = false; }
+    else ctx.lineTo(cx(x), cy(y));
+  }
+  ctx.strokeStyle = '#00e5c8';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // takeoff dot
+  ctx.beginPath();
+  ctx.arc(cx(0), cy(h), 4, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,229,200,0.5)';
+  ctx.fill();
+  ctx.strokeStyle = '#00e5c8';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // entry dot
+  ctx.beginPath();
+  ctx.arc(cx(R), cy(0), 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#f5c842';
+  ctx.fill();
+}
+
+document.getElementById('angleSlider').addEventListener('input', updateCalc);
+document.getElementById('velSlider').addEventListener('input', updateCalc);
+document.getElementById('htSlider').addEventListener('input', updateCalc);
+
+updateCalc();
+window.addEventListener('resize', updateCalc);
+</script>
+</body>
+</html>
